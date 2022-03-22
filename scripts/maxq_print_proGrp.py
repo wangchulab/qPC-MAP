@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-from math import fabs, isnan
+from math import fabs, isnan, ceil, log10
 from scipy import stats
 import numpy as np
 from numpy import log2, log10
@@ -276,6 +276,12 @@ def process(name, Ls, Hs, Rs):
       print("No gap! skipping ...")
       return
 
+    #check second peak's intensity
+    y_max_l = np.max( [l for (l,r) in zip(Ls, Rs) if r>ratio_cutoff] )
+    y_max_h = np.max( [h for (h,r) in zip(Hs, Rs) if r>ratio_cutoff] )
+    y_max_1 = np.max( [y_max_l, y_max_h] )
+    if y_max_1 < 10.0: return
+
     f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
     plt.gca().invert_yaxis()
     tnames = [ t for t in name.split(';') if "CON_" not in t ]
@@ -300,7 +306,7 @@ def process(name, Ls, Hs, Rs):
     ax1.scatter(newRs, xtics, c='orange')
     ax1.axhline( real_mark, -5, 5, linestyle='-', linewidth=1, c='black')
     ax1.set_xlim([-1,4.5])
-    ax1.set_xlabel("$log_2$(H/L)")
+    ax1.set_xlabel("$log_2(H/L)$")
     
     ax2.set_title("(MW: "+str(real_mass)+" kDa)", loc="left")
     sumL = np.sum(Ls)
@@ -310,13 +316,17 @@ def process(name, Ls, Hs, Rs):
     #txtL = [ str(t)+"%" for t in perctL ]
     #ax2.plot(Ls,xtics, linewidth=2)
     #ax2.plot(Hs,xtics)
-    ax2.barh( xtics-0.2, Ls, 0.4, color = "red" )
-    ax2.barh( xtics+0.2, Hs, 0.4, color = "blue")
-    gap = (sumL+sumH)/2.0/100
+
+    ne = ceil(log10(y_max_1)) - 1
+    base_ten = 10.0**ne
+    print("peak2:", y_max_1, ne, base_ten)
+    
+    ax2.barh( xtics-0.2, np.array(Ls)/base_ten, 0.4, color = "red" )
+    ax2.barh( xtics+0.2, np.array(Hs)/base_ten, 0.4, color = "blue")
+    #gap = (sumL+sumH)/2.0/100
+
     #zoom in
-    y_max_l = np.max( [l for (l,r) in zip(Ls, Rs) if r>ratio_cutoff] )
-    y_max_h = np.max( [h for (h,r) in zip(Hs, Rs) if r>ratio_cutoff] )
-    y_max_1 = np.max( [y_max_l, y_max_h] )
+
     #new_Ls = []
     #new_Hs = []
     #for l, h in zip(Ls, Hs):
@@ -328,14 +338,14 @@ def process(name, Ls, Hs, Rs):
     for i, l, h in zip( xtics, Ls, Hs ):
       pL = l / sumL * 100
       pH = h / sumH * 100
-      if pL > 0.05: ax2.text( y_max_1*1.22, i-0.1, "%4.2f%%" % pL, fontsize=7, color="red" )
-      if pH > 0.05: ax2.text( y_max_1*1.22, i+0.3, "%4.2f%%" % pH, fontsize=7, color="blue" )
+      if pL > 0.05: ax2.text( y_max_1*1.22/base_ten, i-0.1, "%4.2f%%" % pL, fontsize=7, color="red" )
+      if pH > 0.05: ax2.text( y_max_1*1.22/base_ten, i+0.3, "%4.2f%%" % pH, fontsize=7, color="blue" )
 
-    ax2.set_xlim([0, y_max_1*1.2])
-    ax2.set_xlabel("$LFQ$")
+    ax2.set_xlim([0, y_max_1*1.2/base_ten])
+    ax2.set_xlabel(r"$LFQ( \times 10^%d)$" % ne)
     #plt.grid(True, axis='y', linestyle="--", alpha=0.5)
     for i in xrange(Nfrac+1):
-      ax2.axhline(i+0.5, 0, y_max_l*1.2, linestyle='--', linewidth=0.4, c='grey', alpha=0.5)
+      ax2.axhline(i+0.5, 0, y_max_1*1.2/base_ten, linestyle='--', linewidth=0.4, c='grey', alpha=0.5)
 
     f.subplots_adjust(wspace=0)
     pdf.savefig(f)
