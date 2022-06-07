@@ -249,7 +249,7 @@ def process(name, Ls, Hs, Rs):
     #the current criteria is too stringent
     #two continuous peaks can not be splitted
     # or Ls[ii]<Ls[top_band] or Hs[ii]<Hs[top_band]
-    if isnan(Rs[ii]): 
+    if isnan(Rs[ii]) or (Ls[ii]<Ls[ii-1] and Ls[ii]<Ls[ii+1]) or (Hs[ii]<Hs[ii-1] and Hs[ii]<Hs[ii+1]): 
       print("Gap found at:", ii+1)
       with_gap = True
       break
@@ -259,9 +259,11 @@ def process(name, Ls, Hs, Rs):
     pdf = pdf2
 
   #check second peak's intensity
+  y_max_0 = np.max([np.max(Ls), np.max(Hs)])
+
   if pdf == pdf1:
-    y_max_l = np.max( [l for (l,r) in zip(Ls, Rs) if r>ratio_cutoff] )
-    y_max_h = np.max( [h for (h,r) in zip(Hs, Rs) if r>ratio_cutoff] )
+    y_max_l = np.max( [l for (l,r) in zip(Ls[:mono_ndx], Rs[:mono_ndx]) if r>ratio_cutoff] )
+    y_max_h = np.max( [h for (h,r) in zip(Hs[:mono_ndx], Rs[:mono_ndx]) if r>ratio_cutoff] )
     y_max_1 = np.max( [y_max_l, y_max_h] )
     if y_max_1 < 10.0:
         #return
@@ -271,8 +273,6 @@ def process(name, Ls, Hs, Rs):
       y_max_l = 0.0
       y_max_h = 0.0
       y_max_1 = 0.0
-
-  y_max_0 = np.max([np.max(Ls), np.max(Hs)])
 
   f = plt.figure() #constrained_layout=True
   AX = gridspec.GridSpec(1,3)
@@ -306,7 +306,6 @@ def process(name, Ls, Hs, Rs):
   ax1.set_xticks([-1,0,1,2,3,4])
   ax1.axvline(0,0,Nfrac,linestyle='--',linewidth=1,c='black')
   rcut = log2(ratio_cutoff)
-  #ax1.axvline(-rcut,0,Nfrac,linestyle='--',linewidth=0.5,c='black')
   ax1.axvline( rcut,0,Nfrac,linestyle='--',linewidth=0.5,c='black')
   for i in xrange(Nfrac+1):
     ax1.axhline(i+0.5, -5, 5, linestyle='--', linewidth=0.4, c='grey', alpha=0.5)
@@ -319,7 +318,7 @@ def process(name, Ls, Hs, Rs):
   ax1.scatter(newRs, xtics, c='orange')
   ax1.axhline( real_mark, -5, 5, linestyle='-', linewidth=1, c='black')
   ax1.set_xlim([-1,4.5])
-  ax1.set_xlabel("$log_2(H/L)$")
+  ax1.set_xlabel("$SILAC\,log_2(H/L)$")
 
   sumL = np.sum(Ls)
   sumH = np.sum(Hs)
